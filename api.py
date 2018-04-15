@@ -3,17 +3,15 @@ import psycopg2
 
 from flask import Flask,request,render_template,make_response,jsonify
 
+#for self computation
+from math import sin, cos, atan2, radians, sqrt
+
 app = Flask(__name__)
-#stage 1 solution
 
-@app.route('/try', methods=['GET','POST'])
-def get_data():
 
-    data=request.json['title']
-    print(data)
+################################################################### STAGE 1 SOLUTION ###############################################
 
 @app.route('/post_location', methods=['GET','POST'])
-
 def related():
     
     try: 	
@@ -24,29 +22,110 @@ def related():
         city = request.json['city']
         print(lat,lng,pincode,address,city)
         conn = psycopg2.connect(dbname="postgres", user = "postgres", password = "password", host = "127.0.0.1", port = "5432")
-        cur = conn.cursor() 
+        cursor = conn.cursor() 
 
         #check if points having lat,lang withing 1km exists or same pincode exists
 
-        cur.execute("SELECT apitest.key, apitest.latitude, apitest.longitude, earth_distance(ll_to_earth("+lat+","+lng+"), ll_to_earth(apitest.latitude, apitest.longitude)) as distance FROM apitest WHERE key='IN/"+pincode+"' OR earth_distance(ll_to_earth("+lat+","+lng+"), ll_to_earth(apitest.latitude, apitest.longitude)) <1000;")
-        fetch = cur.fetchone()
+        cursor.execute("SELECT apitest.key, apitest.latitude, apitest.longitude, earth_distance(ll_to_earth("+lat+","+lng+"), ll_to_earth(apitest.latitude, apitest.longitude)) as distance FROM apitest WHERE key='IN/"+pincode+"' OR earth_distance(ll_to_earth("+lat+","+lng+"), ll_to_earth(apitest.latitude, apitest.longitude)) <1000;")
+        fetch = cursor.fetchone()
         result = ""
         pin = 'IN/'+pincode
-        if cur.rowcount>0:	
+
+        if cursor.rowcount>0:	
             result = "Entry alerady exists in database"
             print("Entry already exists in database or lat and lng nearly equal to some intial data")
         else:
-            cur.execute("INSERT INTO apitest (key, place_name, admin_name1, latitude, longitude, accuracy) VALUES ('"+pin+"','"+address+"','"+city+"',"+lat+","+lng+",'')");
+            cursor.execute("INSERT INTO apitest (key, place_name, admin_name1, latitude, longitude, accuracy) VALUES ('"+pin+"','"+address+"','"+city+"',"+lat+","+lng+",'')");
             result = "Data added to database"
         
         
         conn.commit()
-        cur.close()
+        cursor.close()
         conn.close()
         return jsonify({'task': result}),201
+
     except Exception as e:
         print(e)
         return jsonify({'error':'error'})
+
+
+
+######################################################## STAGE 2 SOLUTION ###############################################################
+
+#using earthdistance
+
+@app.route('/get_using_postgres', methods=['GET'])
+def get_using_postgres():
+    try:
+
+       lat = request.args.to_dict()['latitude']
+       lng = request.args.to_dict()['longitude']
+
+       points = []
+
+       conn = psycopg2.connect(dbname="postgres", user = "postgres", password = "password", host = "127.0.0.1", port = "5432")  
+       cursor = conn.cursor() 
+
+       #filter points withing 5km range
+       cursor.execute("SELECT apitest.key FROM apitest WHERE earth_box(ll_to_earth("+lat+","+lng+"),5000) @> ll_to_earth(apitest.latitude, apitest.longitude);")
+       res = cursor.fetchall()
+
+       for row in res:
+           points.append(row[0]) 
+
+       return jsonify({'points': points}),201
+    
+
+    except Exception as e:
+        print(e)
+        return jsonify({'error':'error'})   
+
+
+#using self created function
+
+@app.route('/get_using_self')
+def get_using_self():
+
+    lat = request.args.to_dict()['latitude']
+    lng = request.args.to_dict()['longitude']
+    radius = request.args.to_dict()['radius']
+
+    R = 6371000
+    
+    conn = psycopg2.connect(dbname="postgres", user = "postgres", password = "password", host = "127.0.0.1", port = "5432")
+    cursor = conn.cursor()
+
+    cursor.execute("select * from apitest")
+    rows = cursor.fetchall()
+
+    points = []
+    for row in rows:
+
+        rlat = row[3]
+        rlng = row[4]
+
+
+        #skip row if lat or lng is null
+        if(rlat==None or rlng==None):
+                continue
+
+        #calculating if point (rlat,rlng) is within the given radius
+        lat1 = radians(float(lat))
+        lat2 = radians(float(rlat))
+
+        lat_diff = radians(float(rlat) - float(lat))
+        lng_diff = radians(float(rlng) - float(lng))
+        
+        A = sin( lat_diff/2 )*sin( lat_diff/2 ) + cos(lat1)*cos(lat2) * sin( lng_diff/2 )*sin( lng_diff/2 )
+        C = 2 * atan2(sqrt(A), sqrt((1 - A)))
+        distance = R * C
+
+        if distance < float(radius):
+            points.append(row[0])
+
+    
+    return jsonify({'result': points})  
+
 
 
 if __name__ == '__main__':
