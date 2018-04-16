@@ -63,6 +63,7 @@ def get_using_postgres():
 
        lat = request.args.to_dict()['latitude']
        lng = request.args.to_dict()['longitude']
+       radius = request.args.to_dict()['radius']
 
        points = []
 
@@ -70,7 +71,7 @@ def get_using_postgres():
        cursor = conn.cursor() 
 
        #filter points withing 5km range
-       cursor.execute("SELECT apitest.key FROM apitest WHERE earth_box(ll_to_earth("+lat+","+lng+"),5000) @> ll_to_earth(apitest.latitude, apitest.longitude);")
+       cursor.execute("SELECT apitest.key FROM apitest WHERE earth_box(ll_to_earth(%s, %s), %s) @> ll_to_earth(apitest.latitude, apitest.longitude)"% (lat, lng, radius))
        res = cursor.fetchall()
 
        for row in res:

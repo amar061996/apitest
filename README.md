@@ -1,6 +1,9 @@
 # Apitest
 RedCarpetUp internship assignment
 
+### API Details
+For details on API check [API Documentatiom](api.md)
+
 ## Database Structure
 Check [Database Documentation](database.md) to know about database structure.
 
@@ -44,8 +47,7 @@ To run the server execute the following in command line
 ```
 python api.py
 ````
-### API Details
-For details on API check [API Documentatiom](api.md)
+
 ### Run tests
 To run the tests go to /test_files and execute the following code
 #### Stage 1 Test
