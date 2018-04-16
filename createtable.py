@@ -12,12 +12,17 @@ cur.execute("""CREATE TABLE apitest (
 		accuracy varchar(5));""")
 
 
+#for stage 3
+cur.execute("""CREATE TABLE boundary (
+				name varchar(35),
+				type varchar(35),
+				parent varchar(35),
+				latitude double precision,
+				longitutde double precision);""")
 
 cur.execute("CREATE EXTENSION cube;")
 
 cur.execute("CREATE EXTENSION earthdistance;")
-
-print ("Created table successfully")
 
 conn.commit()
 cur.close()

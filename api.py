@@ -6,6 +6,9 @@ from flask import Flask,request,render_template,make_response,jsonify
 #for self computation
 from math import sin, cos, atan2, radians, sqrt
 
+#for stage 3
+from shapely.geometry import shape, Point
+
 app = Flask(__name__)
 
 
@@ -20,7 +23,7 @@ def related():
         pincode = request.json['pincode']
         address = request.json['address']
         city = request.json['city']
-        print(lat,lng,pincode,address,city)
+        
         conn = psycopg2.connect(dbname="postgres", user = "postgres", password = "password", host = "127.0.0.1", port = "5432")
         cursor = conn.cursor() 
 
@@ -42,7 +45,7 @@ def related():
         conn.commit()
         cursor.close()
         conn.close()
-        return jsonify({'task': result}),201
+        return jsonify({'result': result}),201
 
     except Exception as e:
         print(e)
@@ -97,7 +100,7 @@ def get_using_self():
 
     cursor.execute("select * from apitest")
     rows = cursor.fetchall()
-
+        
     points = []
     for row in rows:
 
@@ -125,6 +128,57 @@ def get_using_self():
 
     
     return jsonify({'result': points})  
+
+
+############################################################ Stage 3 #####################################################################
+
+@app.route('/get_geo_location')
+def getGeoLocation():
+    try:
+        lat = float(request.args.to_dict()['latitude'])
+        lng = float(request.args.to_dict()['longitude'])
+
+
+        conn = psycopg2.connect(dbname="postgres", user = "postgres", password = "password", host = "127.0.0.1", port = "5432") 
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT name,type,parent FROM boundary;")
+        fetch = cursor.fetchall()
+
+        for row in fetch:
+            location = {}
+            loc_point = []
+        
+            cursor.execute("SELECT latitude, longitutde FROM boundary WHERE name = '"+row[0]+"';")
+            fett = cursor.fetchall()
+
+            for x in fett:
+
+                point = []
+                point.append(float(x[0]))
+                point.append(float(x[1]))
+                loc_point.append(point)
+
+            location['type'] = 'Polygon'
+            location['coordinates'] = [loc_point]
+            
+            loc_shape = shape(location)
+            point = Point(lat, lng)
+
+            if loc_shape.contains(point):
+               result = "Point lies in "+row[0]
+               break;
+
+            else:
+               result = "Point does not lie within given data"
+        
+        return jsonify({'result': result}),201
+    
+
+    except Exception as e:
+        print(e)
+        return jsonify({'Error':'Error'})
+    
+
 
 
 
