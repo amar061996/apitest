@@ -26,7 +26,7 @@
 - Paramaters: 
     1. latitude
     2. longitude
-    3. radius(in meters)
+    3. radius(in kms)
 
 ### Get using Self
 
@@ -38,7 +38,7 @@
 - Paramaters: 
     1. latitude
     2. longitude
-    3. radius
+    3. radius(in kms)
 
 ## Stage 3
 

@@ -63,7 +63,7 @@ def get_using_postgres():
 
        lat = request.args.to_dict()['latitude']
        lng = request.args.to_dict()['longitude']
-       radius = request.args.to_dict()['radius']
+       radius = request.args.to_dict()['radius']+"000"
 
        points = []
 
